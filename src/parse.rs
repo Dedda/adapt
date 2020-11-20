@@ -72,7 +72,7 @@ fn parse_line(line: &str) -> Result<Code, String> {
     } else if line.is_empty() {
         Ok(Nop)
     } else {
-        Err(format!("cannot parse line `{}`", line))
+        Ok(Nop)
     }
 }
 

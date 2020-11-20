@@ -123,9 +123,7 @@ impl Code {
             },
             Self::Del(del_addr_addr) => {
                 let del_addr = read_int_from_address(&code, del_addr_addr.clone())?;
-                println!("old code length {}", code.len());
                 let _ = code.remove(del_addr);
-                println!("new code length {}", code.len());
                 Ok(vec![Actions::Sync])
             }
             Self::Print(addr_addr) => {
