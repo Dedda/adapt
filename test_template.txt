@@ -1,3 +1,0 @@
-jump 2
-exit
-exit 123
