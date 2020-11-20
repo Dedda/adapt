@@ -8,6 +8,7 @@ fn main() {
     let args = std::env::args();
     assert_eq!(2, args.len());
     let src_file = args.last().unwrap();
+    assert!(src_file.ends_with(".ada"));
     let mut program = Program::from_file(src_file);
     std::process::exit(program.run());
 }
