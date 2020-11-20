@@ -23,6 +23,3 @@ flip type 16
 print 16
 del 19
 exit 0
-
-
-
