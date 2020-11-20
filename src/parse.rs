@@ -55,6 +55,16 @@ fn parse_line(line: &str) -> Result<Code, String> {
         Ok(Exit(0))
     } else if Regex::new(r"jump addr \d+").unwrap().is_match(line) {
         Ok(JumpAddr(line[10..].parse().unwrap()))
+    } else if Regex::new(r"jump addr cmp \d+ \d+ \d+ \d+ \d+").unwrap().is_match(line) {
+        let mut split = line[14..].split(' ');
+        let left = split.next().unwrap().parse().unwrap();
+        let right = split.next().unwrap().parse().unwrap();
+        let lt = split.next().unwrap().parse().unwrap();
+        let eq = split.next().unwrap().parse().unwrap();
+        let gt = split.next().unwrap().parse().unwrap();
+        Ok(JumpAddrCmp(left, right, lt, eq, gt))
+    } else if Regex::new(r"del \d+").unwrap().is_match(line) {
+        Ok(Del(line[4..].parse().unwrap()))
     } else if Regex::new(r"_\d+").unwrap().is_match(line) {
         Ok(IntData(line[1..].parse().unwrap()))
     } else if line.len() == 1 {

@@ -14,12 +14,14 @@ pub enum Code {
     FlipType(usize),
     Jump(usize),
     JumpAddr(usize),
+    JumpAddrCmp(usize, usize, usize, usize, usize),
     Swap(usize, usize),
     Copy(usize, usize),
     Add(usize, usize),
     Sub(usize, usize),
     Mul(usize, usize),
     Div(usize, usize),
+    Del(usize),
     Print(usize),
     Exit(i32),
 }
@@ -47,6 +49,26 @@ impl Code {
                 let addr = read_int_from_address(&code, addr_addr.clone())?;
                 Ok(vec![Actions::Jump(addr)])
             },
+            Self::JumpAddrCmp(left_addr_addr, right_addr_addr, lt_addr_addr, eq_addr_addr, gt_addr_addr) => {
+                let left_addr = read_int_from_address(&code, left_addr_addr.clone())?;
+                let left = read_int_from_address(&code, left_addr)?;
+                let right_addr = read_int_from_address(&code, right_addr_addr.clone())?;
+                let right = read_int_from_address(&code, right_addr)?;
+                let sub = left as i128 - right as i128;
+                let jump_addr = match sub.signum() {
+                    -1 => {
+                        read_int_from_address(&code, lt_addr_addr.clone())?
+                    },
+                    1 => {
+                        read_int_from_address(&code, gt_addr_addr.clone())?
+                    },
+                    _ => {
+                        read_int_from_address(&code, eq_addr_addr.clone())?
+                    },
+                };
+                Ok(vec![Actions::Jump(jump_addr)])
+
+            }
             Self::Swap(addr_addr_1, addr_addr_2) => {
                 let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
                 let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
@@ -99,6 +121,13 @@ impl Code {
                 let _ = std::mem::replace(&mut code[addr_2], div);
                 Ok(vec![Actions::Sync])
             },
+            Self::Del(del_addr_addr) => {
+                let del_addr = read_int_from_address(&code, del_addr_addr.clone())?;
+                println!("old code length {}", code.len());
+                let _ = code.remove(del_addr);
+                println!("new code length {}", code.len());
+                Ok(vec![Actions::Sync])
+            }
             Self::Print(addr_addr) => {
                 let addr = read_int_from_address(&code, addr_addr.clone())?;
                 match code.get(addr.clone()) {
@@ -128,12 +157,14 @@ impl Code {
             FlipType(addr) => format!("flip type {}", addr),
             Jump(addr) => format!("jump {}", addr),
             JumpAddr(addr_addr) => format!("jump addr {}", addr_addr),
+            JumpAddrCmp(left, right, lt, eq, gt) => format!("jump addr cmp {} {} {} {} {}", left, right, lt, eq, gt),
             Swap(addr_addr_1, addr_addr_2) => format!("swap {} {}", addr_addr_1, addr_addr_2),
             Copy(addr_addr_1, addr_addr_2) => format!("copy {} {}", addr_addr_1, addr_addr_2),
             Add(addr_addr_1, addr_addr_2) => format!("add {} {}", addr_addr_1, addr_addr_2),
             Sub(addr_addr_1, addr_addr_2) => format!("sub {} {}", addr_addr_1, addr_addr_2),
             Mul(addr_addr_1, addr_addr_2) => format!("mul {} {}", addr_addr_1, addr_addr_2),
             Div(addr_addr_1, addr_addr_2) => format!("div {} {}", addr_addr_1, addr_addr_2),
+            Del(del_addr_addr) => format!("del {}", del_addr_addr),
             Print(addr_addr) => format!("print {}", addr_addr),
             Exit(code) => format!("exit {}", code),
         }
@@ -154,5 +185,24 @@ fn read_int_from_address(code: &Vec<Code>, int_at: usize) -> std::result::Result
         Ok(int.clone())
     } else {
         Err(format!("Data at {} is not an integer", int_at))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod read_from_address {
+        use crate::code::{Code, read_from_address};
+
+        #[test]
+        fn read_existing() {
+            let code = vec![Code::Nop, Code::IntData(123), Code::CharData('c')];
+            assert_eq!(&Code::IntData(123), read_from_address(&code, 1).unwrap());
+        }
+
+        #[test]
+        fn read_out_of_bounds() {
+            let code = vec![Code::Nop, Code::IntData(123), Code::CharData('c')];
+            assert!(read_from_address(&code, 3).is_err());
+        }
     }
 }

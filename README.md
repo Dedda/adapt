@@ -44,3 +44,9 @@ _2
 add 3 2
 print 2
 ```
+
+Be careful with newlines as they alter the source file when they are converted from int to char but they don't update
+the runtime. you basically create a line you cannot address in between the existing instructions. When you execute the
+file again, those new empty lines are parsed as NOP operations though so you should cleanup any possibly created 
+newlines while the program is still running. Take a look at the `test.ada` file where a newline is created and also 
+deleted again in the lines 15-24.
