@@ -1,3 +1,5 @@
+use std::ops::*;
+
 type Result = std::result::Result<Vec<Actions>, String>;
 
 pub enum Actions {
@@ -27,7 +29,7 @@ pub enum Code {
 }
 
 impl Code {
-    pub fn run(&self, code: &mut Vec<Code>) -> Result {
+    pub fn run(&self, mut code: &mut Vec<Code>) -> Result {
         match self {
             Self::FlipType(address_at) => {
                 let address = read_int_from_address(&code, address_at.clone())?;
@@ -79,47 +81,22 @@ impl Code {
                 Ok(vec![Actions::Sync])
             },
             Self::Copy(addr_addr_1, addr_addr_2) => {
-                let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
                 let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
-                let data_1 = read_from_address(&code, addr_1)?.clone();
+                let data_1 = read_from_address_address(&code, addr_addr_1.clone())?.clone();
                 let _ = std::mem::replace(&mut code[addr_2], data_1);
                 Ok(vec![Actions::Sync])
             },
             Self::Add(addr_addr_1, addr_addr_2) => {
-                let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
-                let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
-                let int_1 = read_int_from_address(&code, addr_1)?;
-                let int_2 = read_int_from_address(&code, addr_2)?;
-                let added = Code::IntData(int_1 + int_2);
-                let _ = std::mem::replace(&mut code[addr_2], added);
-                Ok(vec![Actions::Sync])
+                run_binary_int_operation(&mut code, addr_addr_1, addr_addr_2, usize::add )
             },
             Self::Sub(addr_addr_1, addr_addr_2) => {
-                let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
-                let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
-                let int_1 = read_int_from_address(&code, addr_1)?;
-                let int_2 = read_int_from_address(&code, addr_2)?;
-                let subbed = Code::IntData(int_1 - int_2);
-                let _ = std::mem::replace(&mut code[addr_2], subbed);
-                Ok(vec![Actions::Sync])
+                run_binary_int_operation(&mut code, addr_addr_1, addr_addr_2, usize::sub )
             },
             Self::Mul(addr_addr_1, addr_addr_2) => {
-                let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
-                let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
-                let int_1 = read_int_from_address(&code, addr_1)?;
-                let int_2 = read_int_from_address(&code, addr_2)?;
-                let mul = Code::IntData(int_1 * int_2);
-                let _ = std::mem::replace(&mut code[addr_2], mul);
-                Ok(vec![Actions::Sync])
+                run_binary_int_operation(&mut code, addr_addr_1, addr_addr_2, usize::mul )
             },
             Self::Div(addr_addr_1, addr_addr_2) => {
-                let addr_1 = read_int_from_address(&code, addr_addr_1.clone())?;
-                let addr_2 = read_int_from_address(&code, addr_addr_2.clone())?;
-                let int_1 = read_int_from_address(&code, addr_1)?;
-                let int_2 = read_int_from_address(&code, addr_2)?;
-                let div = Code::IntData(int_1 / int_2);
-                let _ = std::mem::replace(&mut code[addr_2], div);
-                Ok(vec![Actions::Sync])
+                run_binary_int_operation(&mut code, addr_addr_1, addr_addr_2, usize::div )
             },
             Self::Del(del_addr_addr) => {
                 let del_addr = read_int_from_address(&code, del_addr_addr.clone())?;
@@ -184,6 +161,30 @@ fn read_int_from_address(code: &Vec<Code>, int_at: usize) -> std::result::Result
     } else {
         Err(format!("Data at {} is not an integer", int_at))
     }
+}
+
+fn read_from_address_address(code: &Vec<Code>, addr_addr: usize) -> std::result::Result<&Code, String> {
+    let addr = read_int_from_address(&code, addr_addr)?;
+    read_from_address(&code, addr)
+}
+
+fn read_int_from_address_address(code: &Vec<Code>, addr_addr: usize) -> std::result::Result<usize, String> {
+    let addr = read_int_from_address(&code, addr_addr)?;
+    read_int_from_address(&code, addr)
+}
+
+fn resolve_binary_int_operand_args(code: &Vec<Code>, left_addr_addr: &usize, right_addr_addr: &usize) -> std::result::Result<(usize, usize, usize), String> {
+    let left = read_int_from_address_address(&code, left_addr_addr.clone())?;
+    let dst = read_int_from_address(&code, right_addr_addr.clone())?;
+    let right = read_int_from_address(&code, dst.clone())?;
+    Ok((left, right, dst))
+}
+
+fn run_binary_int_operation(code: &mut Vec<Code>, left_addr_addr: &usize, right_addr_addr: &usize, op: impl Fn(usize, usize) -> usize) -> Result {
+    let (left, right, dst) = resolve_binary_int_operand_args(&code, left_addr_addr, right_addr_addr)?;
+    let result = op(left, right);
+    let _ = std::mem::replace(&mut code[dst], Code::IntData(result));
+    Ok(vec![Actions::Sync])
 }
 
 #[cfg(test)]
